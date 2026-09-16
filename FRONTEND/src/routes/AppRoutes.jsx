@@ -19,6 +19,8 @@ import { ScreeningDashboard } from '../pages/official/ScreeningDashboard';
 import { AdminDashboard } from '../pages/official/AdminDashboard';
 import { AdminSchemes } from '../pages/official/AdminSchemes';
 import { AdminApplications } from '../pages/official/AdminApplications';
+import { AdminAuditLogs } from '../pages/official/AdminAuditLogs';
+import { AdminReports } from '../pages/official/AdminReports';
 import { Notifications } from '../pages/Notifications';
 
 // Route Guards
@@ -121,6 +123,26 @@ export const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminSchemes />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Protected Admin: Statutory Audit Logs Registry */}
+      <Route
+        path="/admin/audit-logs"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminAuditLogs />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Protected Admin: Statistical & Performance Reports */}
+      <Route
+        path="/admin/reports"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminReports />
           </ProtectedRoute>
         }
       />

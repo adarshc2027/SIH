@@ -3,6 +3,7 @@ import Application from '../models/Application.js';
 import Document from '../models/Document.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { sendNotification } from '../services/notificationService.js';
+import { logAudit } from '../services/auditService.js';
 
 /**
  * @route   POST /api/deficiencies
@@ -102,6 +103,18 @@ export const raiseDeficiency = async (req, res, next) => {
       type: 'deficiency_raised',
       application: application._id,
       link: '/applicant/dashboard'
+    });
+
+    // Record statutory audit entry
+    await logAudit({
+      user: req.user,
+      action: 'Deficiency raised',
+      entityType: 'Deficiency',
+      entityId: deficiency._id,
+      applicationId: application._id,
+      previousStatus: application.status,
+      newStatus: 'deficiency_raised',
+      remarks: `Deficiency raised by officer ${req.user.name}: ${reason}. Action required: ${requiredAction}`
     });
 
     return successResponse(
@@ -370,6 +383,18 @@ export const reviewDeficiency = async (req, res, next) => {
           await app.save();
         }
       }
+
+      // Record statutory audit entry
+      await logAudit({
+        user: req.user,
+        action: 'Deficiency resolved',
+        entityType: 'Deficiency',
+        entityId: deficiency._id,
+        applicationId: deficiency.application._id,
+        previousStatus: 'responded',
+        newStatus: 'resolved',
+        remarks: officerRemarks || 'Officer accepted applicant correction. Deficiency resolved.'
+      });
     } else if (action === 'request_correction') {
       // Re-open deficiency for further correction
       deficiency.status = 'open';

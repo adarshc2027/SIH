@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -149,9 +149,9 @@ export const AdminDashboard = () => {
     { id: 'screening', label: 'Screening', path: '/screening/dashboard', icon: FolderKanban },
     { id: 'schemes', label: 'Schemes', path: '/admin/schemes', icon: Building },
     { id: 'users', label: 'Users', path: '#users', icon: Users, badge: 'Role RBAC' },
-    { id: 'reports', label: 'Reports', path: '#reports', icon: FileBarChart },
-    { id: 'audit', label: 'Audit Logs', path: '#audit', icon: History },
-    { id: 'notifications', label: 'Notifications', path: '#notifications', icon: Bell }
+    { id: 'reports', label: 'Reports', path: '/admin/reports', icon: FileBarChart },
+    { id: 'audit', label: 'Audit Logs', path: '/admin/audit-logs', icon: History },
+    { id: 'notifications', label: 'Notifications', path: '/notifications', icon: Bell }
   ];
 
   // Restrained Government Color Palette for Charts

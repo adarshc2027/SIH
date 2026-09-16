@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Scheme from '../models/Scheme.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
+import { logAudit } from '../services/auditService.js';
 
 /**
  * @route   GET /api/schemes
@@ -173,7 +174,20 @@ export const updateScheme = async (req, res, next) => {
       scheme.code = req.body.code.toUpperCase().trim();
     }
 
+    const prevStatus = scheme.status;
+
     const updatedScheme = await scheme.save();
+
+    // Record statutory audit entry
+    await logAudit({
+      user: req.user,
+      action: 'Scheme modified',
+      entityType: 'Scheme',
+      entityId: updatedScheme._id,
+      previousStatus: prevStatus,
+      newStatus: updatedScheme.status,
+      remarks: `Scheme '${updatedScheme.code}' modified by Administrator ${req.user.name}.`
+    });
 
     return successResponse(res, `Scheme '${updatedScheme.code}' updated successfully`, { scheme: updatedScheme });
   } catch (error) {

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   AlertCircle,
   MessageSquare,
@@ -112,7 +112,7 @@ export const DeficiencyTimeline = ({ deficiency }) => {
             badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-400 font-semibold';
             lineBg = 'bg-emerald-500';
           } else if (status === 'current') {
-            badgeBg = 'bg-amber-100 text-amber-900 border-amber-400 font-semibold animate-pulse';
+            badgeBg = 'bg-amber-100 text-amber-900 border-amber-400 font-semibold';
             lineBg = 'bg-amber-400';
           }
 

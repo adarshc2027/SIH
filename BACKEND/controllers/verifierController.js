@@ -7,6 +7,7 @@ import { evaluateApplicationEligibility } from '../utils/eligibilityEngine.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { runAssistiveDocumentAnalysis } from '../services/ai/index.js';
 import { sendNotification } from '../services/notificationService.js';
+import { logAudit } from '../services/auditService.js';
 
 /**
  * @route   GET /api/verifier/documents/:docId/ai-analysis
@@ -234,17 +235,16 @@ export const verifyDocument = async (req, res, next) => {
         await application.save();
       }
 
-      // Log audit
-      await AuditLog.create({
-        application: application._id,
-        action: 'VERIFY_DOCUMENT',
-        actionLabel: `Verified ${document.documentName || document.documentType}`,
-        performedBy: req.user._id,
-        performedByName: req.user.name,
-        performedByRole: req.user.role,
-        previousStage: application.currentStage,
-        newStage: application.currentStage,
-        remarks: remarks || `Document verified satisfactory (${document.fileName})`,
+      // Record statutory audit entry
+      await logAudit({
+        user: req.user,
+        action: 'Document verified',
+        entityType: 'Document',
+        entityId: document._id,
+        applicationId: application._id,
+        previousStatus: 'uploaded',
+        newStatus: 'verified',
+        remarks: remarks || `Document verified satisfactory: ${document.documentName || document.documentType} (${document.fileName})`,
         metadata: { documentId: document._id, documentType: document.documentType }
       });
 
@@ -302,17 +302,16 @@ export const rejectDocument = async (req, res, next) => {
         await application.save();
       }
 
-      // Log audit
-      await AuditLog.create({
-        application: application._id,
-        action: 'REJECT_DOCUMENT',
-        actionLabel: `Rejected ${document.documentName || document.documentType}`,
-        performedBy: req.user._id,
-        performedByName: req.user.name,
-        performedByRole: req.user.role,
-        previousStage: application.currentStage,
-        newStage: application.currentStage,
-        remarks: remarks,
+      // Record statutory audit entry
+      await logAudit({
+        user: req.user,
+        action: 'Document rejected',
+        entityType: 'Document',
+        entityId: document._id,
+        applicationId: application._id,
+        previousStatus: document.status,
+        newStatus: 'rejected',
+        remarks: remarks || `Document rejected: ${document.documentName || document.documentType}`,
         metadata: { documentId: document._id, documentType: document.documentType }
       });
     }
@@ -482,16 +481,16 @@ export const forwardToScreening = async (req, res, next) => {
     });
     await application.save();
 
-    await AuditLog.create({
-      application: application._id,
-      action: 'FORWARD_TO_SCREENING',
-      actionLabel: 'Forwarded to Level-2 Screening Committee',
-      performedBy: req.user._id,
-      performedByName: req.user.name,
-      performedByRole: req.user.role,
-      previousStage: prevStage,
-      newStage: 'under_screening',
-      remarks: remarks || 'Forwarded to Screening Committee'
+    // Record statutory audit entry
+    await logAudit({
+      user: req.user,
+      action: 'Application forwarded',
+      entityType: 'Application',
+      entityId: application._id,
+      applicationId: application._id,
+      previousStatus: prevStage,
+      newStatus: 'under_screening',
+      remarks: remarks || 'Forwarded to Central Screening Committee'
     });
 
     // Dispatch screening update notification to applicant

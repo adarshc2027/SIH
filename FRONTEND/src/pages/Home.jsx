@@ -221,7 +221,7 @@ export const Home = () => {
       <div className="bg-[#113f67] text-white py-1.5 px-4 sm:px-8 border-b border-[#0c2340]">
         <div className="max-w-7xl mx-auto flex items-center gap-3 text-xs">
           <span className="shrink-0 bg-[#c2410c] text-white font-bold px-2 py-0.5 rounded text-[11px] uppercase tracking-wider flex items-center gap-1">
-            <Bell className="w-3 h-3 animate-pulse" />
+            <Bell className="w-3 h-3" />
             <span>Latest Updates</span>
           </span>
           <div className="overflow-hidden whitespace-nowrap truncate text-slate-200 text-xs">

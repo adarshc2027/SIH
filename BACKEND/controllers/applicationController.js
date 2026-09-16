@@ -4,6 +4,7 @@ import { generateApplicationNumber } from '../utils/applicationNumberGen.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { evaluateApplicationEligibility } from '../utils/eligibilityEngine.js';
 import { sendNotification } from '../services/notificationService.js';
+import { logAudit } from '../services/auditService.js';
 
 /**
  * @route   POST /api/applications
@@ -294,6 +295,18 @@ export const submitApplication = async (req, res, next) => {
       type: 'application_submitted',
       application: application._id,
       link: '/applicant/dashboard'
+    });
+
+    // Record statutory audit entry
+    await logAudit({
+      user: req.user,
+      action: 'Application submitted',
+      entityType: 'Application',
+      entityId: application._id,
+      applicationId: application._id,
+      previousStatus: 'draft',
+      newStatus: 'submitted',
+      remarks: `Citizen submitted application ${application.applicationNumber} for welfare scheme scrutiny.`
     });
 
     return successResponse(
