@@ -8,6 +8,8 @@ import adminRoutes from './routes/adminRoutes.js';
 import applicationRoutes from './routes/applicationRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';
 import deficiencyRoutes from './routes/deficiencyRoutes.js';
+import verifierRoutes from './routes/verifierRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
 dotenv.config();
@@ -56,6 +58,12 @@ app.use('/api/documents', documentRoutes);
 
 // Deficiency Management API
 app.use('/api/deficiencies', deficiencyRoutes);
+
+// Level-1 Verification Officer Scrutiny Desk API
+app.use('/api/verifier', verifierRoutes);
+
+// Portal Notifications API
+app.use('/api/notifications', notificationRoutes);
 
 // Admin-Protected Scheme & System Management API
 app.use('/api/admin', adminRoutes);

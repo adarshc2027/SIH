@@ -3,6 +3,7 @@ import Scheme from '../models/Scheme.js';
 import { generateApplicationNumber } from '../utils/applicationNumberGen.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { evaluateApplicationEligibility } from '../utils/eligibilityEngine.js';
+import { sendNotification } from '../services/notificationService.js';
 
 /**
  * @route   POST /api/applications
@@ -284,6 +285,16 @@ export const submitApplication = async (req, res, next) => {
     application.submittedAt = new Date();
 
     await application.save();
+
+    // Dispatch official notification to applicant
+    await sendNotification({
+      user: application.user,
+      title: 'Application Submitted Successfully',
+      message: `Your application (Ref: ${application.applicationNumber}) has been submitted successfully and entered the official scrutiny queue.`,
+      type: 'application_submitted',
+      application: application._id,
+      link: '/applicant/dashboard'
+    });
 
     return successResponse(
       res,

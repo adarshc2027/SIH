@@ -1,7 +1,8 @@
-﻿import Deficiency from '../models/Deficiency.js';
+import Deficiency from '../models/Deficiency.js';
 import Application from '../models/Application.js';
 import Document from '../models/Document.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
+import { sendNotification } from '../services/notificationService.js';
 
 /**
  * @route   POST /api/deficiencies
@@ -92,6 +93,16 @@ export const raiseDeficiency = async (req, res, next) => {
       createdAt: new Date()
     });
     await application.save();
+
+    // Dispatch notification to applicant
+    await sendNotification({
+      user: application.user,
+      title: 'Action Required: Deficiency Notice',
+      message: `A deficiency has been raised on application ${application.applicationNumber} regarding ${targetDoc?.documentName || reason}. Action required: ${requiredAction}. Deadline: ${deadline.toLocaleDateString('en-IN')}`,
+      type: 'deficiency_raised',
+      application: application._id,
+      link: '/applicant/dashboard'
+    });
 
     return successResponse(
       res,
@@ -264,6 +275,16 @@ export const respondToDeficiency = async (req, res, next) => {
         await app.save();
       }
     }
+
+    // Dispatch notification to applicant acknowledging submission
+    await sendNotification({
+      user: deficiency.application.user,
+      title: 'Correction Resubmitted Successfully',
+      message: `Your explanation and document resubmission for '${deficiency.reason}' has been logged and returned to the scrutiny officer for review.`,
+      type: 'document_resubmission',
+      application: deficiency.application._id,
+      link: '/applicant/dashboard'
+    });
 
     return successResponse(
       res,
