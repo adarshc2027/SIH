@@ -2,6 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import healthRoutes from './routes/healthRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import schemeRoutes from './routes/schemeRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import applicationRoutes from './routes/applicationRoutes.js';
+import documentRoutes from './routes/documentRoutes.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
 dotenv.config();
@@ -33,8 +38,23 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Static uploads directory (for documents)
 app.use('/uploads', express.static('uploads'));
 
-// Health Check API
+// Public Health Check API
 app.use('/api/health', healthRoutes);
+
+// Authentication API
+app.use('/api/auth', authRoutes);
+
+// Public Welfare Schemes API
+app.use('/api/schemes', schemeRoutes);
+
+// Applicant Applications API
+app.use('/api/applications', applicationRoutes);
+
+// Statutory Document Management API
+app.use('/api/documents', documentRoutes);
+
+// Admin-Protected Scheme & System Management API
+app.use('/api/admin', adminRoutes);
 
 // Root informational endpoint
 app.get('/', (req, res) => {

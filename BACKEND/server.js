@@ -7,6 +7,7 @@ dns.setServers([
 
 import app from './app.js';
 import { connectDB } from './config/db.js';
+import { seedDatabase } from './db/seeders.js';
 
 const PORT = process.env.PORT || 5000;
 
@@ -14,6 +15,9 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   try {
     await connectDB();
+
+    // Auto-seed default administrative & demonstration accounts
+    await seedDatabase();
 
     const server = app.listen(PORT, () => {
       console.log(

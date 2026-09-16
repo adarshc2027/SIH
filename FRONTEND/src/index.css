@@ -13,11 +13,17 @@
   body {
     background-color: #f8fafc;
     color: #0f172a;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
     padding: 0;
+  }
+
+  /* Accessible focus indicators for government compliance */
+  *:focus-visible {
+    outline: 2px solid #113f67;
+    outline-offset: 2px;
   }
 }
 
@@ -58,4 +64,8 @@
 
 .gov-table tr:nth-child(even) {
   background-color: #f8fafc;
+}
+
+.gov-table tr:hover {
+  background-color: #f1f5f9;
 }
