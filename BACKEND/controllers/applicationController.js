@@ -2,6 +2,7 @@ import Application from '../models/Application.js';
 import Scheme from '../models/Scheme.js';
 import { generateApplicationNumber } from '../utils/applicationNumberGen.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
+import { evaluateApplicationEligibility } from '../utils/eligibilityEngine.js';
 
 /**
  * @route   POST /api/applications
@@ -266,6 +267,17 @@ export const submitApplication = async (req, res, next) => {
       }
     }
 
+    // Run assistive eligibility evaluation
+    const evalResult = evaluateApplicationEligibility(application, application.scheme);
+    application.eligibilityResult = {
+      isEligible: evalResult.eligible,
+      overallStatus: evalResult.overallStatus,
+      matchedCriteria: evalResult.rules.filter((r) => r.status === 'passed').map((r) => r.rule),
+      flags: evalResult.rules.filter((r) => r.status === 'manual_review').map((r) => r.rule),
+      checkedAt: new Date(),
+      ruleBreakdown: evalResult.rules
+    };
+
     // Lock application
     application.status = 'submitted';
     application.currentStage = 'UNDER_VERIFICATION';
@@ -276,8 +288,51 @@ export const submitApplication = async (req, res, next) => {
     return successResponse(
       res,
       `Application successfully submitted. Your permanent reference number is ${application.applicationNumber}.`,
-      { application }
+      { application, eligibilityAssessment: evalResult }
     );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   GET /api/applications/:id/eligibility
+ * @desc    Run configurable eligibility engine for an application
+ * @access  Private (Applicant or Officer)
+ */
+export const checkApplicationEligibility = async (req, res, next) => {
+  try {
+    const application = await Application.findById(req.params.id).populate('scheme');
+
+    if (!application) {
+      return errorResponse(res, 'Target application record was not found.', 404);
+    }
+
+    // Access control
+    if (req.user.role === 'applicant' && application.user.toString() !== req.user._id.toString()) {
+      return errorResponse(res, 'Unauthorized access to this application evaluation.', 403);
+    }
+
+    const scheme = application.scheme;
+    if (!scheme) {
+      return errorResponse(res, 'Associated scheme master data not found.', 404);
+    }
+
+    // Evaluate application against scheme configuration
+    const assessment = evaluateApplicationEligibility(application, scheme);
+
+    // Persist latest check in application model
+    application.eligibilityResult = {
+      isEligible: assessment.eligible,
+      overallStatus: assessment.overallStatus,
+      matchedCriteria: assessment.rules.filter((r) => r.status === 'passed').map((r) => r.rule),
+      flags: assessment.rules.filter((r) => r.status === 'manual_review').map((r) => r.rule),
+      checkedAt: new Date(),
+      ruleBreakdown: assessment.rules
+    };
+    await application.save();
+
+    return successResponse(res, 'Application eligibility evaluation complete', assessment);
   } catch (error) {
     next(error);
   }

@@ -8,4 +8,6 @@ export { ErrorState } from './ErrorState';
 export { Table } from './Table';
 export { SectionHeading } from './SectionHeading';
 export { PageContainer } from './PageContainer';
+export { EligibilityCheck } from './EligibilityCheck';
+export { DeficiencyTimeline } from './DeficiencyTimeline';
 export * from './Form';

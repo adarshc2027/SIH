@@ -4,7 +4,8 @@ import {
   getMyApplications,
   getApplicationById,
   updateApplication,
-  submitApplication
+  submitApplication,
+  checkApplicationEligibility
 } from '../controllers/applicationController.js';
 import { protect } from '../middleware/auth.middleware.js';
 
@@ -26,6 +27,13 @@ router.post('/', createOrSaveDraft);
  * @access  Private (Applicant)
  */
 router.get('/my', getMyApplications);
+
+/**
+ * @route   GET /api/applications/:id/eligibility
+ * @desc    Evaluate application against configurable scheme rules
+ * @access  Private (Applicant/Officer)
+ */
+router.get('/:id/eligibility', checkApplicationEligibility);
 
 /**
  * @route   GET /api/applications/:id

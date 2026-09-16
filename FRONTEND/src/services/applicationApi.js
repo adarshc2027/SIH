@@ -28,3 +28,8 @@ export const updateApplicationApi = async (id, data) => {
 export const submitApplicationApi = async (id) => {
   return await api.post(`/applications/${id}/submit`);
 };
+
+// Check application eligibility against scheme rules
+export const checkApplicationEligibilityApi = async (id) => {
+  return await api.get(`/applications/${id}/eligibility`);
+};

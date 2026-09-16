@@ -14,13 +14,15 @@ import {
   RadioGroup,
   FileUpload,
   LoadingState,
-  ErrorState
+  ErrorState,
+  EligibilityCheck
 } from '../../components/ui';
 import { getSchemeByIdApi } from '../../services/schemeApi';
 import {
   createOrSaveDraftApi,
   updateApplicationApi,
-  submitApplicationApi
+  submitApplicationApi,
+  checkApplicationEligibilityApi
 } from '../../services/applicationApi';
 import { uploadDocumentApi } from '../../services/documentApi';
 import {
@@ -122,6 +124,10 @@ export const ApplyScheme = () => {
   const [saveMessage, setSaveMessage] = useState('');
   const [submittedApp, setSubmittedApp] = useState(null);
   const [statutoryAgreed, setStatutoryAgreed] = useState(false);
+
+  // Assistive Eligibility Assessment State
+  const [eligibilityAssessment, setEligibilityAssessment] = useState(null);
+  const [loadingEligibility, setLoadingEligibility] = useState(false);
 
   // Fetch Scheme Data
   useEffect(() => {
@@ -321,6 +327,26 @@ export const ApplyScheme = () => {
     // Step 7: Review -> advances to Step 8 (Submit)
     // Auto-save draft on advancing
     handleSaveDraft();
+
+    // If advancing into Step 7 (Review), trigger assistive eligibility assessment
+    if (currentStep === 6) {
+      if (applicationId) {
+        setLoadingEligibility(true);
+        checkApplicationEligibilityApi(applicationId)
+          .then((res) => {
+            if (res?.data) {
+              setEligibilityAssessment(res.data);
+            }
+          })
+          .catch((err) => {
+            console.warn('Assistive eligibility check notice:', err.message);
+          })
+          .finally(() => {
+            setLoadingEligibility(false);
+          });
+      }
+    }
+
     setCurrentStep((prev) => Math.min(prev + 1, 8));
   };
 
@@ -1253,6 +1279,16 @@ export const ApplyScheme = () => {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* 5. Assistive Eligibility Assessment Display */}
+            <div className="pt-2">
+              <EligibilityCheck
+                assessment={eligibilityAssessment}
+                loading={loadingEligibility}
+                title="Scheme Rules & Eligibility Assessment"
+                hindiTitle="योजना पात्रता नियम मूल्यांकन"
+              />
             </div>
           </div>
         )}

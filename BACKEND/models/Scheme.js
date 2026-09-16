@@ -98,6 +98,15 @@ const schemeSchema = new mongoose.Schema(
       type: [String],
       default: []
     },
+    eligibilityCriteria: {
+      stCertificateRequired: { type: Boolean, default: true },
+      minQualification: { type: String, default: '' },
+      minMarksPercentage: { type: Number, default: 0 },
+      maxAgeYears: { type: Number, default: null },
+      maxAnnualFamilyIncome: { type: Number, default: null },
+      requireAdmissionLetter: { type: Boolean, default: true },
+      topQsRankMax: { type: Number, default: null }
+    },
     requiredDocuments: {
       type: [requiredDocumentSchema],
       default: []

@@ -7,6 +7,7 @@ import schemeRoutes from './routes/schemeRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import applicationRoutes from './routes/applicationRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';
+import deficiencyRoutes from './routes/deficiencyRoutes.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
 dotenv.config();
@@ -52,6 +53,9 @@ app.use('/api/applications', applicationRoutes);
 
 // Statutory Document Management API
 app.use('/api/documents', documentRoutes);
+
+// Deficiency Management API
+app.use('/api/deficiencies', deficiencyRoutes);
 
 // Admin-Protected Scheme & System Management API
 app.use('/api/admin', adminRoutes);

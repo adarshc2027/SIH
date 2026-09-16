@@ -16,6 +16,7 @@ import { VerifierDashboard } from '../pages/official/VerifierDashboard';
 import { ScreeningDashboard } from '../pages/official/ScreeningDashboard';
 import { AdminDashboard } from '../pages/official/AdminDashboard';
 import { AdminSchemes } from '../pages/official/AdminSchemes';
+import { AdminApplications } from '../pages/official/AdminApplications';
 
 // Route Guards
 import { ProtectedRoute } from './ProtectedRoute';
@@ -79,6 +80,16 @@ export const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Protected Admin: Master Applications Desk */}
+      <Route
+        path="/admin/applications"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminApplications />
           </ProtectedRoute>
         }
       />

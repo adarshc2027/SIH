@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getMyApplicationsApi } from '../../services/applicationApi';
+import {
+  getMyApplicationsApi,
+  checkApplicationEligibilityApi
+} from '../../services/applicationApi';
 import {
   uploadDocumentApi,
   getDocumentsByApplicationApi,
   deleteDocumentApi
 } from '../../services/documentApi';
+import {
+  getMyDeficienciesApi,
+  respondToDeficiencyApi
+} from '../../services/deficiencyApi';
 import {
   SectionHeading,
   Button,
@@ -16,7 +23,9 @@ import {
   Table,
   Input,
   Select,
-  LoadingState
+  LoadingState,
+  EligibilityCheck,
+  DeficiencyTimeline
 } from '../../components/ui';
 import { APP_CONFIG, SCHEMES } from '../../utils/constants';
 import {
@@ -71,6 +80,17 @@ export const ApplicantDashboard = () => {
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [uploading, setUploading] = useState(false);
 
+  // Deficiency management state
+  const [deficiencies, setDeficiencies] = useState([]);
+  const [loadingDefs, setLoadingDefs] = useState(false);
+  const [respondModalOpen, setRespondModalOpen] = useState(false);
+  const [activeDeficiency, setActiveDeficiency] = useState(null);
+  const [applicantExplanation, setApplicantExplanation] = useState('');
+  const [resubmittedDocId, setResubmittedDocId] = useState('');
+  const [submittingResponse, setSubmittingResponse] = useState(false);
+  const [deficiencySuccess, setDeficiencySuccess] = useState('');
+  const [deficiencyError, setDeficiencyError] = useState('');
+
   const fetchApplications = async () => {
     try {
       setLoadingApps(true);
@@ -82,6 +102,20 @@ export const ApplicantDashboard = () => {
       console.error('Failed to load real applications, falling back to records:', err);
     } finally {
       setLoadingApps(false);
+    }
+  };
+
+  const fetchDeficiencies = async () => {
+    try {
+      setLoadingDefs(true);
+      const res = await getMyDeficienciesApi();
+      if (res?.success && Array.isArray(res.data?.deficiencies)) {
+        setDeficiencies(res.data.deficiencies);
+      }
+    } catch (err) {
+      console.warn('Could not fetch applicant deficiencies:', err.message);
+    } finally {
+      setLoadingDefs(false);
     }
   };
 
@@ -105,7 +139,38 @@ export const ApplicantDashboard = () => {
 
   useEffect(() => {
     fetchApplications();
+    fetchDeficiencies();
   }, []);
+
+  const handleRespondToDeficiency = async (e) => {
+    e.preventDefault();
+    if (!activeDeficiency) return;
+
+    try {
+      setSubmittingResponse(true);
+      setDeficiencyError('');
+      setDeficiencySuccess('');
+
+      const payload = {
+        applicantRemarks: applicantExplanation,
+        resubmittedDocumentId: resubmittedDocId || undefined
+      };
+
+      const res = await respondToDeficiencyApi(activeDeficiency._id, payload);
+      if (res?.success) {
+        setDeficiencySuccess('Response and undertaking submitted successfully. Application returned to scrutiny worklist.');
+        setRespondModalOpen(false);
+        setApplicantExplanation('');
+        setResubmittedDocId('');
+        fetchDeficiencies();
+        fetchApplications();
+      }
+    } catch (err) {
+      setDeficiencyError(err.response?.data?.message || 'Failed to submit deficiency response.');
+    } finally {
+      setSubmittingResponse(false);
+    }
+  };
 
   useEffect(() => {
     if (realApplications.length > 0) {
@@ -115,6 +180,58 @@ export const ApplicantDashboard = () => {
 
   // Application details modal state
   const [selectedApp, setSelectedApp] = useState(null);
+  const [appEligibility, setAppEligibility] = useState(null);
+  const [loadingAppEligibility, setLoadingAppEligibility] = useState(false);
+
+  const handleOpenAppDetails = (app) => {
+    setSelectedApp(app);
+    setAppEligibility(null);
+    if (app?.rawId) {
+      setLoadingAppEligibility(true);
+      checkApplicationEligibilityApi(app.rawId)
+        .then((res) => {
+          if (res?.data) {
+            setAppEligibility(res.data);
+          }
+        })
+        .catch((err) => {
+          console.warn('Could not load application eligibility evaluation:', err.message);
+        })
+        .finally(() => {
+          setLoadingAppEligibility(false);
+        });
+    } else {
+      // Mock fallback evaluation for demo records
+      setAppEligibility({
+        eligible: true,
+        overallStatus: app.status === 'deficient' ? 'manual_review' : 'passed',
+        evaluatedAt: new Date().toISOString(),
+        rules: [
+          {
+            rule: 'Scheduled Tribe (ST) Statutory Certification',
+            category: 'community',
+            status: app.status === 'deficient' ? 'manual_review' : 'passed',
+            details: app.status === 'deficient' ? 'Officer requested re-upload of caste certificate due to blurred revenue seal.' : 'Valid ST certificate verified from State portal.',
+            critical: true
+          },
+          {
+            rule: 'Minimum Academic Performance (>= 55%)',
+            category: 'academic',
+            status: 'passed',
+            details: 'Qualifying degree percentage 68.5% satisfies prescribed scheme rule.',
+            critical: true
+          },
+          {
+            rule: 'Confirmed University Admission / Registration',
+            category: 'admission',
+            status: 'passed',
+            details: `Confirmed research registration at ${app.university || 'Recognized University'}.`,
+            critical: true
+          }
+        ]
+      });
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -319,9 +436,11 @@ export const ApplicantDashboard = () => {
   ];
 
   // Navigation Items
+  const openDefsCount = deficiencies.filter((d) => d.status === 'open').length;
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', hindi: 'डैशबोर्ड', icon: LayoutDashboard },
     { id: 'applications', label: 'My Applications', hindi: 'मेरे आवेदन', icon: FileText, badge: myApplications.length },
+    { id: 'deficiencies', label: 'Deficiencies', hindi: 'कमियां / सुधार', icon: AlertTriangle, badge: openDefsCount > 0 ? `${openDefsCount} Action` : null },
     { id: 'apply', label: 'Apply for Scheme', hindi: 'नया आवेदन', icon: FilePlus },
     { id: 'documents', label: 'Document Repository', hindi: 'दस्तावेज़ भंडार', icon: FolderOpen },
     { id: 'notifications', label: 'Notifications', hindi: 'सूचनाएं', icon: Bell, badge: '1 Action' },
@@ -658,7 +777,7 @@ export const ApplicantDashboard = () => {
                           <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => setSelectedApp(app)}
+                            onClick={() => handleOpenAppDetails(app)}
                             leftIcon={Eye}
                           >
                             View Full Details
@@ -769,13 +888,145 @@ export const ApplicantDashboard = () => {
                         <Button variant="outline" size="sm" leftIcon={Download} onClick={() => alert('Downloading official submission receipt')}>
                           Download PDF Slip
                         </Button>
-                        <Button variant="secondary" size="sm" onClick={() => setSelectedApp(app)}>
+                        <Button variant="secondary" size="sm" onClick={() => handleOpenAppDetails(app)}>
                           View Timeline & Audit
                         </Button>
                       </div>
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* ================= TAB: DEFICIENCIES & ACTIONS ================= */}
+            {activeTab === 'deficiencies' && (
+              <div className="bg-white border border-slate-300 rounded p-6 shadow-xs space-y-5">
+                <SectionHeading
+                  title="Statutory Deficiencies & Rectification Desk"
+                  hindiTitle="कमियां और दस्तावेज सुधार"
+                  subtitle="Official discrepancy notices issued by Scrutiny Desks requiring your response or document resubmission"
+                  accentColor="saffron"
+                />
+
+                {deficiencySuccess && (
+                  <Alert variant="success" onClose={() => setDeficiencySuccess('')}>
+                    {deficiencySuccess}
+                  </Alert>
+                )}
+
+                {deficiencyError && (
+                  <Alert variant="error" onClose={() => setDeficiencyError('')}>
+                    {deficiencyError}
+                  </Alert>
+                )}
+
+                {deficiencies.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-300 rounded space-y-2">
+                    <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
+                    <h4 className="font-bold text-slate-800 text-sm">No Deficiencies Raised</h4>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto">
+                      All your submitted applications and uploaded documents are currently verified or undergoing regular scrutiny without any discrepancy notices.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {deficiencies.map((def) => {
+                      const isPendingAction = def.status === 'open';
+                      return (
+                        <div
+                          key={def._id}
+                          className={`border rounded p-5 space-y-4 shadow-2xs ${
+                            isPendingAction
+                              ? 'border-orange-300 bg-orange-50/20 ring-1 ring-orange-200'
+                              : 'border-slate-300 bg-white'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-slate-900 text-sm">
+                                  {def.reason}
+                                </h4>
+                                <StatusBadge status={def.status} size="sm" />
+                              </div>
+                              <p className="text-xs text-slate-500 font-mono">
+                                App No: {def.application?.applicationNumber || 'MOTA Fellowship'} • Category: {def.documentType || 'Statutory Discrepancy'}
+                              </p>
+                            </div>
+
+                            <div className="text-right">
+                              <span className="text-[11px] text-red-700 font-bold font-mono block">
+                                Deadline: {new Date(def.deadline).toLocaleDateString('en-IN')}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                Raised by: {def.raisedByName || 'Scrutiny Officer'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="text-xs space-y-2 text-slate-700">
+                            <div>
+                              <strong className="text-slate-900 block text-[11px]">Officer Finding / Reason:</strong>
+                              <p className="bg-slate-50 p-2.5 rounded border border-slate-200 mt-0.5 leading-relaxed">
+                                {def.description}
+                              </p>
+                            </div>
+
+                            <div>
+                              <strong className="text-amber-900 block text-[11px]">Required Corrective Action:</strong>
+                              <p className="bg-amber-50 text-amber-950 p-2.5 rounded border border-amber-200 mt-0.5 leading-relaxed">
+                                {def.requiredAction}
+                              </p>
+                            </div>
+
+                            {/* Applicant previous response if already answered */}
+                            {def.applicantRemarks && (
+                              <div className="bg-blue-50/70 border border-blue-200 rounded p-2.5 space-y-1">
+                                <div className="flex items-center justify-between text-[11px]">
+                                  <strong className="text-[#0c2340]">Your Submitted Response:</strong>
+                                  <span className="font-mono text-slate-500">
+                                    {new Date(def.respondedAt).toLocaleDateString('en-IN')}
+                                  </span>
+                                </div>
+                                <p className="text-slate-800 leading-relaxed">
+                                  {def.applicantRemarks}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Officer Resolution remarks if resolved */}
+                            {def.officerResolutionRemarks && (
+                              <div className="bg-emerald-50 border border-emerald-200 rounded p-2.5 text-xs text-emerald-950">
+                                <strong>Resolution Note from Ministry:</strong> {def.officerResolutionRemarks}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 5-Step Visual Timeline */}
+                          <DeficiencyTimeline deficiency={def} />
+
+                          {/* Action Button for Applicant */}
+                          {isPendingAction && (
+                            <div className="pt-2 flex justify-end gap-2 border-t border-slate-200">
+                              <Button
+                                variant="accent"
+                                size="sm"
+                                onClick={() => {
+                                  setActiveDeficiency(def);
+                                  setApplicantExplanation('');
+                                  setResubmittedDocId('');
+                                  setRespondModalOpen(true);
+                                }}
+                              >
+                                Respond & Resubmit Document
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1237,6 +1488,11 @@ export const ApplicantDashboard = () => {
               </div>
             )}
 
+            {/* Assistive Scheme Eligibility Assessment */}
+            <div className="pt-2">
+              <EligibilityCheck assessment={appEligibility} loading={loadingAppEligibility} />
+            </div>
+
             <div className="space-y-2 text-xs">
               <h4 className="font-bold text-[#0c2340] uppercase tracking-wider text-[11px]">
                 Verification Timeline
@@ -1363,6 +1619,61 @@ export const ApplicantDashboard = () => {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal: Respond to Statutory Deficiency */}
+      <Modal
+        isOpen={respondModalOpen}
+        onClose={() => setRespondModalOpen(false)}
+        title="Respond to Statutory Deficiency Notice"
+        subtitle={`Reference: ${activeDeficiency?.reason || ''} • Ministry Scrutiny Desk`}
+        maxWidth="max-w-lg"
+      >
+        <form onSubmit={handleRespondToDeficiency} className="space-y-4 text-xs">
+          <div className="bg-amber-50 border border-amber-200 rounded p-3 space-y-1">
+            <strong className="text-amber-950 block text-[11px]">Officer Required Action:</strong>
+            <p className="text-amber-900 leading-relaxed">
+              {activeDeficiency?.requiredAction}
+            </p>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">
+              Applicant Explanation / Undertaking *
+            </label>
+            <textarea
+              value={applicantExplanation}
+              onChange={(e) => setApplicantExplanation(e.target.value)}
+              rows={4}
+              placeholder="State the corrective actions taken, certificate issuance details, or clarifications..."
+              className="w-full border border-slate-300 rounded p-2 text-xs focus:ring-1 focus:ring-[#113f67] outline-hidden"
+              required
+            />
+          </div>
+
+          <Alert variant="info" title="Document Resubmission">
+            If you need to upload a replacement certificate, please ensure you upload the clean copy via the Document Repository tab, or select the uploaded document to link with this reply.
+          </Alert>
+
+          <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setRespondModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="accent"
+              size="sm"
+              disabled={submittingResponse}
+            >
+              {submittingResponse ? 'Submitting...' : 'Submit Response to Scrutiny Desk'}
+            </Button>
+          </div>
+        </form>
       </Modal>
 
     </div>

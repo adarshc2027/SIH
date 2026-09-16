@@ -62,6 +62,15 @@ const defaultSchemes = [
       'Scholars pursuing distance education or part-time research programs are not eligible.',
       'Total annual awards are capped at 750 slots nationwide across all states/UTs.'
     ],
+    eligibilityCriteria: {
+      stCertificateRequired: true,
+      minQualification: 'Post-Graduate Degree',
+      minMarksPercentage: 55,
+      maxAgeYears: null,
+      maxAnnualFamilyIncome: null,
+      requireAdmissionLetter: true,
+      topQsRankMax: null
+    },
     requiredDocuments: [
       {
         name: 'Scheduled Tribe (ST) Certificate',
@@ -150,6 +159,15 @@ const defaultSchemes = [
       'Maximum age of applicant should not exceed 35 years as on the first day of the application year.',
       'Not more than one child of the same parents/guardians can avail the award simultaneously.'
     ],
+    eligibilityCriteria: {
+      stCertificateRequired: true,
+      minQualification: 'Graduation / Post-Graduation',
+      minMarksPercentage: 55,
+      maxAgeYears: 35,
+      maxAnnualFamilyIncome: 600000,
+      requireAdmissionLetter: true,
+      topQsRankMax: 500
+    },
     requiredDocuments: [
       {
         name: 'Scheduled Tribe (ST) Certificate',
@@ -304,11 +322,12 @@ export const seedDatabase = async () => {
 
     // Seed default schemes (NFST, NOS, Post-Matric)
     for (const schemeData of defaultSchemes) {
-      const exists = await Scheme.findOne({ code: schemeData.code });
-      if (!exists) {
-        await Scheme.create(schemeData);
-        console.log(`[Seed] Created default scheme: ${schemeData.code} - ${schemeData.name}`);
-      }
+      await Scheme.findOneAndUpdate(
+        { code: schemeData.code },
+        { $set: schemeData },
+        { upsert: true, new: true }
+      );
+      console.log(`[Seed] Synced default scheme: ${schemeData.code} - ${schemeData.name}`);
     }
   } catch (err) {
     console.error(`[Seed Error]: ${err.message}`);
