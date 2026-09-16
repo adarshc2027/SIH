@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { Menu, X, PhoneCall, Globe, User, UserPlus, LogOut, LayoutDashboard } from 'lucide-react';
+import { Menu, X, PhoneCall, Globe, User, UserPlus, LogOut, LayoutDashboard, Bell } from 'lucide-react';
 import { APP_CONFIG } from '../../utils/constants';
 import { useAuth } from '../../context/AuthContext';
+import { NotificationDropdown } from './NotificationDropdown';
 
 export const Header = () => {
   const { user, isAuthenticated, logout, getDashboardPath } = useAuth();
@@ -189,6 +190,7 @@ export const Header = () => {
           <div className="hidden md:flex items-center space-x-2 py-1.5">
             {isAuthenticated ? (
               <div className="flex items-center space-x-2">
+                <NotificationDropdown />
                 <Link
                   to={getDashboardPath(user?.role)}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded bg-white text-[#0c2340] hover:bg-slate-100 border border-white transition-colors"
@@ -226,20 +228,23 @@ export const Header = () => {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Menu Button & Notifications */}
           <div className="flex md:hidden items-center justify-between w-full py-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-200">
               Navigation Menu
             </span>
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 rounded text-slate-200 hover:text-white hover:bg-[#113f67] border border-slate-600 cursor-pointer"
-              aria-expanded={mobileMenuOpen}
-              aria-label="Toggle navigation menu"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+            <div className="flex items-center gap-2">
+              {isAuthenticated && <NotificationDropdown />}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-1.5 rounded text-slate-200 hover:text-white hover:bg-[#113f67] border border-slate-600 cursor-pointer"
+                aria-expanded={mobileMenuOpen}
+                aria-label="Toggle navigation menu"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -275,6 +280,14 @@ export const Header = () => {
                   >
                     <LayoutDashboard className="w-3.5 h-3.5" />
                     <span>Go to Dashboard ({user?.role})</span>
+                  </Link>
+                  <Link
+                    to="/notifications"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded bg-[#113f67] text-white border border-[#1e4b7a]"
+                  >
+                    <Bell className="w-3.5 h-3.5" />
+                    <span>Notification Desk</span>
                   </Link>
                   <button
                     type="button"

@@ -10,4 +10,5 @@ export { SectionHeading } from './SectionHeading';
 export { PageContainer } from './PageContainer';
 export { EligibilityCheck } from './EligibilityCheck';
 export { DeficiencyTimeline } from './DeficiencyTimeline';
+export { AssistiveAiReport } from './AssistiveAiReport';
 export * from './Form';

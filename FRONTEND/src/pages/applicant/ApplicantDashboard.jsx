@@ -15,6 +15,11 @@ import {
   respondToDeficiencyApi
 } from '../../services/deficiencyApi';
 import {
+  getNotificationsApi,
+  markNotificationAsReadApi,
+  markAllNotificationsAsReadApi
+} from '../../services/notificationApi';
+import {
   SectionHeading,
   Button,
   StatusBadge,
@@ -137,9 +142,30 @@ export const ApplicantDashboard = () => {
     }
   };
 
+  // Live notifications state
+  const [liveNotifications, setLiveNotifications] = useState([]);
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoadingNotifs(true);
+      const res = await getNotificationsApi();
+      if (res?.success && res.data) {
+        setLiveNotifications(res.data.notifications || []);
+        setUnreadNotifsCount(res.data.unreadCount || 0);
+      }
+    } catch (err) {
+      console.warn('Could not fetch notifications:', err.message);
+    } finally {
+      setLoadingNotifs(false);
+    }
+  };
+
   useEffect(() => {
     fetchApplications();
     fetchDeficiencies();
+    fetchNotifications();
   }, []);
 
   const handleRespondToDeficiency = async (e) => {
@@ -443,7 +469,7 @@ export const ApplicantDashboard = () => {
     { id: 'deficiencies', label: 'Deficiencies', hindi: 'कमियां / सुधार', icon: AlertTriangle, badge: openDefsCount > 0 ? `${openDefsCount} Action` : null },
     { id: 'apply', label: 'Apply for Scheme', hindi: 'नया आवेदन', icon: FilePlus },
     { id: 'documents', label: 'Document Repository', hindi: 'दस्तावेज़ भंडार', icon: FolderOpen },
-    { id: 'notifications', label: 'Notifications', hindi: 'सूचनाएं', icon: Bell, badge: '1 Action' },
+    { id: 'notifications', label: 'Notifications', hindi: 'सूचनाएं', icon: Bell, badge: unreadNotifsCount > 0 ? `${unreadNotifsCount} New` : null },
     { id: 'profile', label: 'Scholar Profile', hindi: 'प्रोफ़ाइल', icon: User }
   ];
 
@@ -1348,41 +1374,136 @@ export const ApplicantDashboard = () => {
             {/* ================= TAB: NOTIFICATIONS ================= */}
             {activeTab === 'notifications' && (
               <div className="bg-white border border-slate-300 rounded p-6 shadow-xs space-y-5">
-                <SectionHeading
-                  title="Official Notifications & Alerts"
-                  hindiTitle="आधिकारिक सूचनाएं"
-                  subtitle="Direct communications dispatched from MoTA Scrutiny and Screening Desks"
-                  accentColor="saffron"
-                />
-
-                <div className="space-y-3">
-                  {notifications.map((notif) => (
-                    <div
-                      key={notif.id}
-                      className={`border rounded p-4 text-xs space-y-1.5 ${
-                        notif.priority === 'HIGH'
-                          ? 'border-orange-300 bg-orange-50/50'
-                          : 'border-slate-300 bg-white'
-                      }`}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <SectionHeading
+                    title="Official Notifications & Alerts"
+                    hindiTitle="आधिकारिक सूचनाएं"
+                    subtitle="Direct communications dispatched from MoTA Scrutiny and Screening Desks"
+                    accentColor="saffron"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to="/notifications"
+                      className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 inline-flex items-center gap-1.5 cursor-pointer"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded uppercase ${
-                            notif.priority === 'HIGH' ? 'bg-red-100 text-red-800 border border-red-300' : 'bg-slate-100 text-slate-700'
-                          }`}>
-                            {notif.priority}
-                          </span>
-                          <h4 className="font-bold text-slate-900 text-xs sm:text-sm">{notif.title}</h4>
-                        </div>
-                        <span className="font-mono text-[11px] text-slate-500">{notif.date}</span>
-                      </div>
-
-                      <p className="text-slate-600 leading-relaxed">
-                        {notif.content}
-                      </p>
-                    </div>
-                  ))}
+                      <span>Full Notification Desk</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Link>
+                    {unreadNotifsCount > 0 && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await markAllNotificationsAsReadApi();
+                            setLiveNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+                            setUnreadNotifsCount(0);
+                          } catch (err) {
+                            console.warn('Failed to mark all read:', err);
+                          }
+                        }}
+                      >
+                        Mark All as Read ({unreadNotifsCount})
+                      </Button>
+                    )}
+                  </div>
                 </div>
+
+                {loadingNotifs ? (
+                  <div className="p-8 text-center text-slate-500 text-xs">
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto text-slate-400 mb-2" />
+                    <span>Loading latest ministry communications...</span>
+                  </div>
+                ) : liveNotifications.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 border border-slate-200 rounded bg-slate-50 space-y-2">
+                    <Bell className="w-6 h-6 mx-auto text-slate-300" />
+                    <p className="font-semibold text-slate-700">No Communications Found</p>
+                    <p className="text-xs text-slate-500">You have no pending deficiency alerts or statutory intimations.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {liveNotifications.map((notif) => (
+                      <div
+                        key={notif._id || notif.id}
+                        className={`border rounded p-4 text-xs space-y-2 transition-colors ${
+                          !notif.read
+                            ? 'border-amber-300 bg-amber-50/20 shadow-xs'
+                            : 'border-slate-300 bg-white'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                          <div className="flex items-start gap-2.5">
+                            <span
+                              className={`inline-block w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${
+                                !notif.read ? 'bg-[#c2410c]' : 'bg-slate-300'
+                              }`}
+                            />
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className="text-[10px] font-bold px-2 py-0.2 rounded border uppercase bg-slate-100 text-slate-800 border-slate-300">
+                                  {notif.type?.replace('_', ' ') || 'SYSTEM'}
+                                </span>
+                                {!notif.read && (
+                                  <span className="bg-[#c2410c] text-white text-[10px] font-bold px-1.5 py-0.2 rounded">
+                                    UNREAD
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className={`text-sm ${!notif.read ? 'font-bold text-[#0c2340]' : 'font-semibold text-slate-800'}`}>
+                                {notif.title}
+                              </h4>
+                            </div>
+                          </div>
+                          <span className="font-mono text-[11px] text-slate-500 shrink-0">
+                            {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : notif.date}
+                          </span>
+                        </div>
+
+                        <p className="text-slate-600 leading-relaxed pl-5">
+                          {notif.message || notif.content}
+                        </p>
+
+                        <div className="pt-2 border-t border-slate-100 pl-5 flex items-center justify-between">
+                          {notif.link ? (
+                            <Link
+                              to={notif.link}
+                              className="text-xs font-semibold text-[#113f67] hover:underline inline-flex items-center gap-1"
+                            >
+                              <span>View Associated File</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          ) : <span />}
+
+                          {!notif.read && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  await markNotificationAsReadApi(notif._id);
+                                  setLiveNotifications((prev) =>
+                                    prev.map((item) => (item._id === notif._id ? { ...item, read: true } : item))
+                                  );
+                                  setUnreadNotifsCount((prev) => Math.max(0, prev - 1));
+                                } catch (err) {
+                                  console.warn(err);
+                                }
+                              }}
+                              className="text-[11px] font-medium text-slate-600 hover:text-slate-900 border border-slate-300 rounded px-2 py-0.5 bg-white hover:bg-slate-50 cursor-pointer"
+                            >
+                              Mark as Read
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

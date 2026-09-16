@@ -13,10 +13,13 @@ import { Register } from '../pages/Register';
 import { ApplicantDashboard } from '../pages/applicant/ApplicantDashboard';
 import { ApplyScheme } from '../pages/applicant/ApplyScheme';
 import { VerifierDashboard } from '../pages/official/VerifierDashboard';
+import { VerifierApplications } from '../pages/official/VerifierApplications';
+import { VerifierApplicationDetail } from '../pages/official/VerifierApplicationDetail';
 import { ScreeningDashboard } from '../pages/official/ScreeningDashboard';
 import { AdminDashboard } from '../pages/official/AdminDashboard';
 import { AdminSchemes } from '../pages/official/AdminSchemes';
 import { AdminApplications } from '../pages/official/AdminApplications';
+import { Notifications } from '../pages/Notifications';
 
 // Route Guards
 import { ProtectedRoute } from './ProtectedRoute';
@@ -64,6 +67,24 @@ export const AppRoutes = () => {
         }
       />
 
+      <Route
+        path="/verifier/applications"
+        element={
+          <ProtectedRoute allowedRoles={['verifier', 'admin']}>
+            <VerifierApplications />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/verifier/applications/:id"
+        element={
+          <ProtectedRoute allowedRoles={['verifier', 'admin']}>
+            <VerifierApplicationDetail />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Protected Official: Level-2 Screening Committee */}
       <Route
         path="/screening/dashboard"
@@ -100,6 +121,16 @@ export const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminSchemes />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Protected: Official Communications & Notifications Desk */}
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute allowedRoles={['applicant', 'verifier', 'screening_officer', 'admin']}>
+            <Notifications />
           </ProtectedRoute>
         }
       />
