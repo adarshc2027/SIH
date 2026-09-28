@@ -21,7 +21,7 @@ const app = express();
 
 // Parse and collect allowed client origins
 const getAllowedOrigins = () => {
-  const defaultOrigins = [
+  const defaultOrigins = ['https://sih-nine-eta.vercel.app/',
     'http://localhost:5173',
     'http://localhost:3000',
     'http://127.0.0.1:5173',
