@@ -22,11 +22,12 @@ const app = express();
 // Parse and collect allowed client origins
 const getAllowedOrigins = () => {
   const defaultOrigins = [
+    'https://sih-2b5ii91r8-adarshc2027-1145.vercel.app',
     'http://localhost:5173',
     'http://localhost:3000',
     'http://127.0.0.1:5173',
     'http://localhost:4173'
-  ];
+  ].map((url) => url.replace(/\/+$/, ''));
 
   if (process.env.CLIENT_URL) {
     const configured = process.env.CLIENT_URL
