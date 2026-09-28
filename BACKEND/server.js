@@ -1,9 +1,12 @@
 import dns from 'dns';
 
-dns.setServers([
-  '8.8.8.8',
-  '1.1.1.1'
-]);
+try {
+  if (dns && typeof dns.setServers === 'function') {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  }
+} catch (e) {
+  // Safe ignore in environments with restricted DNS configuration
+}
 
 import app from './app.js';
 import { connectDB } from './config/db.js';

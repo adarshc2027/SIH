@@ -19,6 +19,7 @@ import {
   markNotificationAsReadApi,
   markAllNotificationsAsReadApi
 } from '../../services/notificationApi';
+import { getFileUrl } from '../../services/api';
 import {
   SectionHeading,
   Button,
@@ -1223,7 +1224,7 @@ export const ApplicantDashboard = () => {
                                   variant="secondary"
                                   size="sm"
                                   leftIcon={Eye}
-                                  onClick={() => window.open(doc.fileUrl, '_blank')}
+                                  onClick={() => window.open(getFileUrl(doc.fileUrl), '_blank')}
                                 >
                                   View
                                 </Button>

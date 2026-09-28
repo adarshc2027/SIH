@@ -2,16 +2,33 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-// Ensure upload directories exist
-const uploadDirectory = path.resolve('uploads', 'documents');
-if (!fs.existsSync(uploadDirectory)) {
-  fs.mkdirSync(uploadDirectory, { recursive: true });
-}
+// Determine safe upload directory (writable /tmp for serverless/Vercel, local folder otherwise)
+export const getUploadDirectory = () => {
+  if (process.env.UPLOAD_DIR) {
+    return path.resolve(process.env.UPLOAD_DIR);
+  }
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join('/tmp', 'uploads', 'documents');
+  }
+  return path.resolve('uploads', 'documents');
+};
+
+const ensureDirectoryExists = (dir) => {
+  try {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch (err) {
+    console.warn(`[Storage Warning] Directory notice for ${dir}: ${err.message}`);
+  }
+};
 
 // Storage Configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDirectory);
+    const uploadDir = getUploadDirectory();
+    ensureDirectoryExists(uploadDir);
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     // Sanitize and create unique timestamped filename

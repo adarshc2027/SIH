@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { errorResponse } from '../utils/apiResponse.js';
+import { getJwtSecret } from '../utils/jwt.js';
 
 /**
  * Protect routes: verify JWT Bearer token and attach current user to req.user
@@ -20,7 +21,7 @@ export const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mota_secret_fallback_key');
+    const decoded = jwt.verify(token, getJwtSecret());
 
     const user = await User.findById(decoded.id).select('-password');
 

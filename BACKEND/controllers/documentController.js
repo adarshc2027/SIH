@@ -4,6 +4,7 @@ import Document from '../models/Document.js';
 import Application from '../models/Application.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { assistiveDocumentService } from '../utils/assistiveDocumentService.js';
+import { getUploadDirectory } from '../middleware/uploadMiddleware.js';
 
 /**
  * @route   POST /api/documents/upload
@@ -56,7 +57,7 @@ export const uploadDocument = async (req, res, next) => {
 
     if (document) {
       // Remove old disk file if it exists
-      const oldFilePath = path.resolve('uploads', 'documents', document.storedFileName);
+      const oldFilePath = path.join(getUploadDirectory(), document.storedFileName);
       if (fs.existsSync(oldFilePath)) {
         try {
           fs.unlinkSync(oldFilePath);
@@ -229,7 +230,7 @@ export const deleteDocument = async (req, res, next) => {
 
     // Remove physical file from disk
     if (document.storedFileName) {
-      const filePath = path.resolve('uploads', 'documents', document.storedFileName);
+      const filePath = path.join(getUploadDirectory(), document.storedFileName);
       if (fs.existsSync(filePath)) {
         try {
           fs.unlinkSync(filePath);

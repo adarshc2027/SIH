@@ -45,6 +45,7 @@ import {
   getDocumentAiAnalysisApi
 } from '../../services/verifierApi';
 import { raiseDeficiencyApi } from '../../services/deficiencyApi';
+import { getFileUrl } from '../../services/api';
 
 export const VerifierApplicationDetail = () => {
   const { id } = useParams();
@@ -495,7 +496,7 @@ export const VerifierApplicationDetail = () => {
                   <tr key={doc._id} className="hover:bg-slate-50">
                     <td className="p-2.5 font-semibold text-slate-900">{doc.documentName || doc.documentType}</td>
                     <td className="p-2.5 font-mono text-[11px] text-slate-600">
-                      <a href={`http://localhost:5000${doc.fileUrl}`} target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1 text-[#113f67]">
+                      <a href={getFileUrl(doc.fileUrl)} target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1 text-[#113f67]">
                         <Eye className="w-3 h-3" />
                         <span>{doc.fileName}</span>
                       </a>

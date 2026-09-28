@@ -1,6 +1,9 @@
+import path from 'path';
+import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { connectDB } from './config/db.js';
 import healthRoutes from './routes/healthRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import schemeRoutes from './routes/schemeRoutes.js';
@@ -16,33 +19,95 @@ dotenv.config();
 
 const app = express();
 
-// Enable CORS for client applications
-const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:5173'
-];
+// Parse and collect allowed client origins
+const getAllowedOrigins = () => {
+  const defaultOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://localhost:4173'
+  ];
 
-app.use(cors({
+  if (process.env.CLIENT_URL) {
+    const configured = process.env.CLIENT_URL
+      .split(',')
+      .map((url) => url.trim().replace(/\/+$/, ''))
+      .filter(Boolean);
+    return Array.from(new Set([...defaultOrigins, ...configured]));
+  }
+
+  return defaultOrigins;
+};
+
+// Enable robust CORS configuration
+const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, postman)
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow non-browser requests (mobile apps, server-to-server, curl, Postman)
+    if (!origin) {
       return callback(null, true);
     }
-    return callback(null, true); // Permissive in development
+
+    const allowed = getAllowedOrigins();
+
+    // Direct match against allowed origins
+    if (allowed.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Automatically allow Vercel deployment and preview URLs
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+
+    // Permissive in local development
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+
+    return callback(null, false);
   },
-  credentials: true
-}));
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Body Parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static uploads directory (for documents)
-app.use('/uploads', express.static('uploads'));
+// Static uploads directory (supports both local disk and serverless /tmp)
+const localUploads = path.resolve('uploads');
+if (fs.existsSync(localUploads)) {
+  app.use('/uploads', express.static(localUploads));
+}
+if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  const tmpUploads = path.join('/tmp', 'uploads');
+  if (!fs.existsSync(tmpUploads)) {
+    try {
+      fs.mkdirSync(tmpUploads, { recursive: true });
+    } catch (e) {
+      // Safe ignore in restricted environment
+    }
+  }
+  app.use('/uploads', express.static(tmpUploads));
+}
 
-// Public Health Check API
+// Public Health Check API (always responds directly)
 app.use('/api/health', healthRoutes);
+
+// Ensure MongoDB database connection is ready for all data API routes
+app.use('/api', async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    next(new Error(`Database connection failed: ${error.message}`));
+  }
+});
 
 // Authentication API
 app.use('/api/auth', authRoutes);

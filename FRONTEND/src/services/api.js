@@ -1,8 +1,47 @@
 import axios from 'axios';
 
+// Normalize the API base URL to ensure proper endpoint routing
+const resolveApiBaseUrl = (rawUrl) => {
+  if (!rawUrl || rawUrl.trim() === '') {
+    return '/api';
+  }
+  let cleaned = rawUrl.trim().replace(/\/+$/, '');
+  // If the user specified an origin without /api, append /api
+  if (!cleaned.endsWith('/api')) {
+    cleaned = `${cleaned}/api`;
+  }
+  return cleaned;
+};
+
+export const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
+
+// Helper to construct fully qualified URLs for uploaded statutory documents
+export const getFileUrl = (filePath) => {
+  if (!filePath) return '';
+
+  // Strip hardcoded localhost development prefixes if stored in legacy records
+  const cleaned = filePath.replace(/^http:\/\/localhost:\d+/i, '');
+
+  // If already an absolute web URL (e.g. AWS S3, Cloudinary, Vercel Blob), return as-is
+  if (cleaned.startsWith('http://') || cleaned.startsWith('https://')) {
+    return cleaned;
+  }
+
+  const normalized = cleaned.startsWith('/') ? cleaned : `/${cleaned}`;
+
+  // If API_BASE_URL is an absolute URL (e.g. https://backend.vercel.app/api)
+  if (API_BASE_URL.startsWith('http://') || API_BASE_URL.startsWith('https://')) {
+    const backendOrigin = API_BASE_URL.replace(/\/api\/?$/, '');
+    return `${backendOrigin}${normalized}`;
+  }
+
+  // Unified deployment or relative proxy mode
+  return normalized;
+};
+
 // Create Axios client instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: API_BASE_URL,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
